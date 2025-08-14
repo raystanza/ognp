@@ -52,11 +52,11 @@ dotnet run --project ognp
 ### Pack a portable EXE (self-contained)
 
 ```powershell
-dotnet publish ognp -c Release -r win-x64 `
+dotnet publish -c Release -r win-x64 --self-contained true `
   -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true `
-  --self-contained true
-# Output in: .\ognp\bin\Release\net8.0-windows\win-x64\publish\ognp.exe
+  -p:EnableCompressionInSingleFile=true `
+  -p:DebugType=None -p:DebugSymbols=false `
+# Output in: .\ognp\bin\Release\net9.0-windows\win-x64\publish\ognp.exe
 ```
 
 > For ARM64: use `-r win-arm64`.

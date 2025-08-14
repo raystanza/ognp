@@ -5,6 +5,12 @@
 #
 
 #
+# Dev Scripts & Distrobution File
+#
+dev/
+dist/
+
+#
 # Binaries and build artifacts
 #
 [Bb]in/
