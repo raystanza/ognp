@@ -1,0 +1,99 @@
+# Top-level EditorConfig for ognp
+root = true
+
+############################
+# General defaults
+############################
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+############################
+# C# files
+############################
+[*.{cs,csx}]
+indent_style = space
+indent_size = 4
+
+# Use latest C# available in the target SDK
+dotnet_language_version = latest
+
+# Qualification (prefer uncluttered member access)
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+# Access modifiers
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
+
+# Using directives
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = true
+
+# var preferences
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+# Expression-bodied members (only when short/clear)
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = when_on_single_line:suggestion
+
+# Namespace & usings placement
+csharp_style_namespace_declarations = block_scoped:suggestion
+csharp_using_directive_placement = outside_namespace:suggestion
+
+# Braces & new lines
+csharp_prefer_braces = true:suggestion
+csharp_new_line_before_open_brace = all
+
+# Pattern matching & null checks (keep readable defaults)
+csharp_style_prefer_pattern_matching = true:suggestion
+csharp_style_prefer_switch_expression = true:suggestion
+csharp_style_prefer_not_pattern = true:suggestion
+csharp_style_prefer_extended_property_pattern = true:suggestion
+csharp_style_prefer_tuple_swap = true:suggestion
+
+############################
+# Naming conventions
+############################
+
+# Private fields: _camelCase
+dotnet_naming_rule.private_fields_should_have_underscore_prefix.severity = suggestion
+dotnet_naming_rule.private_fields_should_have_underscore_prefix.symbols  = private_fields
+dotnet_naming_rule.private_fields_should_have_underscore_prefix.style    = underscore_prefix
+
+dotnet_naming_symbols.private_fields.applicable_kinds           = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.required_modifiers         =
+
+dotnet_naming_style.underscore_prefix.capitalization = camel_case
+dotnet_naming_style.underscore_prefix.required_prefix = _
+
+# Constants: PascalCase
+dotnet_naming_rule.constants_should_be_pascalcase.severity = suggestion
+dotnet_naming_rule.constants_should_be_pascalcase.symbols  = constants
+dotnet_naming_rule.constants_should_be_pascalcase.style    = pascalcase_style
+
+dotnet_naming_symbols.constants.applicable_kinds   = field
+dotnet_naming_symbols.constants.required_modifiers = const
+
+dotnet_naming_style.pascalcase_style.capitalization = pascal_case
+
+# Types & members: PascalCase
+dotnet_naming_rule.types_members_pascalcase.severity = suggestion
+dotnet_naming_rule.types_members_pascalcase.symbols  = types_members
+dotnet_naming_rule.types_members_pascalcase.style    = pascalcase_style
+
+dotnet_naming_symbols.types_members.applicable_kinds = class, struct, interface, enum, delegate, property, method, event
+
+############################
+# Markdown/docs
+############################
+[*.{md,txt}]
+end_of_line = crlf
+trim_trailing_whitespace = false
+insert_final_newline = true
