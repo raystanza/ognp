@@ -5,7 +5,7 @@
  * © 2025 Jim Sines (raystanza).
  *
  * Licensed under GPL-3.0-or-later.
-
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -21,6 +21,7 @@
 */
 
 using System;
+using System.IO;
 using System.Windows.Forms;
 
 namespace ognp
@@ -31,8 +32,30 @@ namespace ognp
         static void Main(string[] args)
         {
             ApplicationConfiguration.Initialize();
-            string? path = args.Length > 0 ? args[0] : null; // open file from cmdline if provided
-            Application.Run(new MainForm(path));
+
+            string? path = null;
+            int? line = null;
+
+            // Accept either: ognp.exe +123 file.txt  OR  ognp.exe file.txt +123
+            foreach (var a in args)
+            {
+                if (a.StartsWith("+", StringComparison.Ordinal) &&
+                    int.TryParse(a.AsSpan(1), out var n) && n > 0)
+                {
+                    line = n;
+                }
+                else
+                {
+                    path = a;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                try { path = Path.GetFullPath(path!); } catch { /* ignore bad paths */ }
+            }
+
+            Application.Run(new MainForm(path, line));
         }
     }
 }

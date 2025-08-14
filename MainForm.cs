@@ -5,7 +5,7 @@
  * © 2025 Jim Sines (raystanza).
  *
  * Licensed under GPL-3.0-or-later.
-
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -27,6 +27,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Drawing.Printing;
 
 namespace ognp
 {
@@ -38,6 +39,7 @@ namespace ognp
         private readonly StatusStrip status = new StatusStrip();
         private readonly ToolStripStatusLabel sbPos = new ToolStripStatusLabel();
         private readonly ToolStripStatusLabel sbEol = new ToolStripStatusLabel();
+        private readonly ToolStripStatusLabel sbIns = new ToolStripStatusLabel();
         private readonly ToolStripStatusLabel sbEnc = new ToolStripStatusLabel();
 
         // State
@@ -45,7 +47,7 @@ namespace ognp
         private Encoding currentEncoding = Encoding.Default;        // ANSI mindset
         private string currentEol = "\r\n";                         // Windows CRLF by default
         private string currentEolName = "Windows (CRLF)";
-        private bool suppressTextChanged = false;                   // to avoid “modified” flicker during loads
+        private bool suppressTextChanged = false;                   // avoid "modified" flicker during loads
         private bool isModified = false;
 
         // Find/Replace state
@@ -59,7 +61,17 @@ namespace ognp
         private ToolStripMenuItem formatWordWrapItem = null!;
         private ToolStripMenuItem editGoToItem = null!;
 
-        public MainForm(string? initialPath)
+        // Printing
+        private readonly PrintDocument _printDoc = new PrintDocument();
+        private int _printCharIndex = 0;
+
+        // Status bar insert/overtype
+        private bool _overwriteMode = false;
+
+        // Large-file friendliness
+        private const long LargeFileWarnBytes = 10L * 1024 * 1024; // 10 MB soft warning
+
+        public MainForm(string? initialPath, int? initialLine = null)
         {
             Text = "Untitled - Notepad";
             Icon = SystemIcons.Application;
@@ -68,7 +80,7 @@ namespace ognp
             Height = 650;
             KeyPreview = true;
 
-            // Editor config
+            // Editor config (classic)
             editor.Multiline = true;
             editor.AcceptsReturn = true;
             editor.AcceptsTab = true;
@@ -81,6 +93,18 @@ namespace ognp
             editor.KeyUp += (_, __) => UpdateStatus();
             editor.MouseUp += (_, __) => UpdateStatus();
             editor.KeyDown += Editor_KeyDown;
+
+            // Overtype actual behavior
+            editor.KeyPress += Editor_KeyPress;
+
+            // Drag & Drop
+            editor.AllowDrop = true;
+            editor.DragEnter += Editor_DragEnter;
+            editor.DragDrop += Editor_DragDrop;
+
+            // Printing
+            _printDoc.BeginPrint += PrintDoc_BeginPrint;
+            _printDoc.PrintPage += PrintDoc_PrintPage;
 
             BuildMenus();
             BuildStatusBar();
@@ -95,6 +119,7 @@ namespace ognp
             if (!string.IsNullOrWhiteSpace(initialPath) && File.Exists(initialPath))
             {
                 LoadFile(initialPath);
+                if (initialLine.HasValue) JumpToLine(initialLine.Value);
             }
             else
             {
@@ -119,12 +144,17 @@ namespace ognp
             { ShortcutKeys = Keys.Control | Keys.S };
             var fileSaveAs = new ToolStripMenuItem("Save &As...", null, (_, __) => FileSaveAs())
             { ShortcutKeys = Keys.F12 };
+            var filePageSetup = new ToolStripMenuItem("Page Set&up...", null, (_, __) => FilePageSetup());
+            var filePrint = new ToolStripMenuItem("&Print...", null, (_, __) => FilePrint())
+            { ShortcutKeys = Keys.Control | Keys.P };
             var fileExit = new ToolStripMenuItem("E&xit", null, (_, __) => Close());
 
             file.DropDownItems.AddRange(new ToolStripItem[]
             {
-                fileNew, fileOpen, new ToolStripSeparator(), fileSave, fileSaveAs,
-                new ToolStripSeparator(), fileExit
+                fileNew, fileOpen, new ToolStripSeparator(),
+                fileSave, fileSaveAs, new ToolStripSeparator(),
+                filePageSetup, filePrint, new ToolStripSeparator(),
+                fileExit
             });
 
             // Edit
@@ -201,6 +231,8 @@ namespace ognp
             status.Items.Add(new ToolStripStatusLabel() { Spring = true });
             status.Items.Add(sbEol);
             status.Items.Add(new ToolStripStatusLabel() { Text = "  " });
+            status.Items.Add(sbIns);
+            status.Items.Add(new ToolStripStatusLabel() { Text = "  " });
             status.Items.Add(sbEnc);
             UpdateStatus();
         }
@@ -255,28 +287,72 @@ namespace ognp
             }
         }
 
+        // Streamed load + BOM detection + large-file soft warning
         private void LoadFile(string path)
         {
-            byte[] bytes = File.ReadAllBytes(path);
-            Encoding? bomEnc = DetectEncodingFromBom(bytes);
-            var enc = bomEnc ?? Encoding.Default; // ANSI if no BOM
+            try
+            {
+                var fi = new FileInfo(path);
+                bool warn = fi.Exists && fi.Length >= LargeFileWarnBytes;
 
-            string text = enc.GetString(bytes);
+                if (warn)
+                {
+                    var res = MessageBox.Show(
+                        $"The file is {fi.Length / (1024 * 1024)} MB. Opening may be slow. Open anyway?",
+                        "Notepad",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+                    if (res != DialogResult.Yes) return;
+                }
 
-            // Detect line endings for status + later save preservation
-            DetectAndSetEol(text);
+                UseWaitCursor = true;
+                Cursor.Current = Cursors.WaitCursor;
+                Application.DoEvents();
 
-            suppressTextChanged = true;
-            editor.Text = NormalizeToEditor(text);
-            editor.SelectionStart = 0;
-            editor.SelectionLength = 0;
-            suppressTextChanged = false;
+                string text;
+                Encoding enc;
 
-            currentPath = path;
-            currentEncoding = enc;
-            isModified = false;
-            UpdateTitle();
-            UpdateStatus();
+                // Streamed read; default to ANSI if no BOM is present
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16))
+                using (var sr = new StreamReader(fs, Encoding.Default, detectEncodingFromByteOrderMarks: true, bufferSize: 1 << 16))
+                {
+                    var sb = new StringBuilder((int)Math.Min(Math.Max(1024, fi.Length), 50_000_000)); // heuristic capacity
+                    char[] buf = new char[1 << 14]; // 16K chars
+                    int n;
+                    while ((n = sr.Read(buf, 0, buf.Length)) > 0)
+                        sb.Append(buf, 0, n);
+
+                    text = sb.ToString();
+                    enc = sr.CurrentEncoding;
+                }
+
+                // Detect line endings for status + preserve-on-save
+                DetectAndSetEol(text);
+
+                suppressTextChanged = true;
+                editor.SuspendLayout();
+                editor.Text = NormalizeToEditor(text);
+                editor.SelectionStart = 0;
+                editor.SelectionLength = 0;
+                editor.ResumeLayout();
+                suppressTextChanged = false;
+
+                currentPath = path;
+                currentEncoding = enc;
+                isModified = false;
+                UpdateTitle();
+                UpdateStatus();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open file.\n\n{ex.Message}", "Notepad",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                UseWaitCursor = false;
+                Cursor.Current = Cursors.Default;
+            }
         }
 
         private bool FileSave()
@@ -338,56 +414,32 @@ namespace ognp
             }
         }
 
-        private static Encoding? DetectEncodingFromBom(ReadOnlySpan<byte> bytes)
-        {
-            if (bytes.Length >= 4)
-            {
-                if (bytes[0] == 0xFF && bytes[1] == 0xFE && bytes[2] == 0x00 && bytes[3] == 0x00) return Encoding.UTF32; // UTF-32 LE BOM
-                if (bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0xFE && bytes[3] == 0xFF)
-                    return new UTF32Encoding(bigEndian: true, byteOrderMark: true);
-            }
-            if (bytes.Length >= 3)
-            {
-                if (bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) return new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
-            }
-            if (bytes.Length >= 2)
-            {
-                if (bytes[0] == 0xFF && bytes[1] == 0xFE) return Encoding.Unicode;     // UTF-16 LE
-                if (bytes[0] == 0xFE && bytes[1] == 0xFF) return Encoding.BigEndianUnicode; // UTF-16 BE
-            }
-            return null;
-        }
-
-        private void DetectAndSetEol(string text)
+        private static void DetectAndSetEol(string text, out string eol, out string name)
         {
             // Check order: CRLF, LF, CR (classic Mac)
             if (text.Contains("\r\n"))
-                SetEol("\r\n", "Windows (CRLF)");
+            { eol = "\r\n"; name = "Windows (CRLF)"; }
             else if (text.Contains('\n'))
-                SetEol("\n", "Unix (LF)");
+            { eol = "\n"; name = "Unix (LF)"; }
             else if (text.Contains('\r'))
-                SetEol("\r", "Mac (CR)");
+            { eol = "\r"; name = "Mac (CR)"; }
             else
-                SetEol("\r\n", "Windows (CRLF)"); // default
+            { eol = "\r\n"; name = "Windows (CRLF)"; }
         }
-
-        private void SetEol(string eol, string name)
+        private void DetectAndSetEol(string text)
         {
-            currentEol = eol;
-            currentEolName = name;
+            DetectAndSetEol(text, out currentEol, out currentEolName);
         }
 
         private static string NormalizeToEditor(string text)
         {
-            // Convert to a consistent in-editor representation (we’ll store whatever is present, but the TextBox
-            // happily handles CRLF and LF. We keep as-is to respect caret positions visually.)
-            // No change needed; the TextBox can display either. We only normalize on save.
+            // WinForms TextBox can display CRLF/LF; keep as-is so caret positions are natural.
             return text;
         }
 
         private string PrepareForSave(string text)
         {
-            // Normalize all line breaks to \n then convert to the chosen EOL
+            // Normalize to \n then convert to the chosen EOL
             var normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
             return normalized.Replace("\n", currentEol);
         }
@@ -449,17 +501,22 @@ namespace ognp
 
         private void ShowFindReplace(bool replaceMode)
         {
-            if (findForm != null)
+            // Copy to a local to satisfy nullable analysis for fields
+            var f = findForm;
+            if (f != null)
             {
-                findForm.Focus();
-                findForm.SwitchMode(replaceMode);
+                f.Focus();
+                f.SwitchMode(replaceMode);
                 return;
             }
 
-            findForm = new FindReplaceForm(replaceMode);
-            findForm.StartPosition = FormStartPosition.CenterParent;
+            f = new FindReplaceForm(replaceMode)
+            {
+                StartPosition = FormStartPosition.CenterParent
+            };
+            findForm = f;
 
-            findForm.FindNextRequested += (pattern, matchCase, searchDown) =>
+            f.FindNextRequested += (pattern, matchCase, searchDown) =>
             {
                 lastFind = pattern;
                 lastMatchCase = matchCase;
@@ -467,7 +524,7 @@ namespace ognp
                 DoFindNext(false);
             };
 
-            findForm.ReplaceRequested += (pattern, replacement, matchCase, searchDown) =>
+            f.ReplaceRequested += (pattern, replacement, matchCase, searchDown) =>
             {
                 lastFind = pattern;
                 lastMatchCase = matchCase;
@@ -475,16 +532,16 @@ namespace ognp
                 DoReplaceOnce(replacement);
             };
 
-            findForm.ReplaceAllRequested += (pattern, replacement, matchCase) =>
+            f.ReplaceAllRequested += (pattern, replacement, matchCase) =>
             {
                 lastFind = pattern;
                 lastMatchCase = matchCase;
                 DoReplaceAll(replacement);
             };
 
-            findForm.FormClosed += (_, __) => findForm = null;
+            f.FormClosed += (_, __) => findForm = null;
 
-            findForm.Show(this);
+            f.Show(this);
         }
 
         private void ShowGoTo()
@@ -527,16 +584,15 @@ namespace ognp
             if (lastSearchDown && !reverse)
             {
                 found = text.IndexOf(needle, searchFrom, comparison);
-                if (found < 0) found = text.IndexOf(needle, 0, comparison); // wrap around
+                if (found < 0) found = text.IndexOf(needle, 0, comparison); // wrap
             }
             else
             {
                 // search up
                 if (searchFrom >= 0)
-                {
                     found = text.LastIndexOf(needle, searchFrom, comparison);
-                }
-                if (found < 0) found = text.LastIndexOf(needle, text.Length - 1, comparison); // wrap around
+                if (found < 0)
+                    found = text.LastIndexOf(needle, text.Length - 1, comparison); // wrap
             }
 
             if (found >= 0)
@@ -548,7 +604,7 @@ namespace ognp
             }
             else
             {
-                MessageBox.Show("Cannot find \"" + needle + "\"", "Notepad",
+                MessageBox.Show($"Cannot find \"{needle}\"", "ognp",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -612,17 +668,82 @@ namespace ognp
 
         private void Editor_KeyDown(object? sender, KeyEventArgs e)
         {
+            // Insert toggles overtype
+            if (e.KeyCode == Keys.Insert)
+            {
+                _overwriteMode = !_overwriteMode;
+                UpdateStatus();
+                e.Handled = true;
+                return;
+            }
+
             // F5 = Insert date/time
             if (e.KeyCode == Keys.F5)
             {
                 InsertTimeDate();
                 e.Handled = true;
             }
-            // Shift+F3 : Find previous (common behavior)
+            // Shift+F3 : Find previous
             else if (e.KeyCode == Keys.F3 && e.Shift)
             {
                 DoFindNext(true);
                 e.Handled = true;
+            }
+        }
+
+        // Implement real overtype behavior
+        private void Editor_KeyPress(object? sender, KeyPressEventArgs e)
+        {
+            if (!_overwriteMode) return;
+            if (char.IsControl(e.KeyChar)) return; // let backspace, enter, etc. behave normally
+            if (editor.SelectionLength > 0) return; // normal replace if selection exists
+
+            int caret = editor.SelectionStart;
+            if (caret < editor.TextLength)
+            {
+                // don't overwrite across line endings
+                char c = editor.Text[caret];
+                if (c != '\r' && c != '\n')
+                {
+                    editor.SelectionLength = 1; // select next char so typed char replaces it
+                }
+            }
+            // default processing inserts (replaces selection if any)
+        }
+
+        private void Editor_DragEnter(object? sender, DragEventArgs e)
+        {
+            if (e.Data?.GetDataPresent(DataFormats.FileDrop) == true ||
+                e.Data?.GetDataPresent(DataFormats.UnicodeText) == true ||
+                e.Data?.GetDataPresent(DataFormats.Text) == true)
+            {
+                e.Effect = DragDropEffects.Copy;
+            }
+        }
+
+        private void Editor_DragDrop(object? sender, DragEventArgs e)
+        {
+            if (e.Data == null) return;
+
+            // File(s) dropped?
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                if (!ConfirmDiscardChanges()) return;
+
+                var files = (string[])e.Data.GetData(DataFormats.FileDrop)!;
+                if (files.Length > 0 && File.Exists(files[0]))
+                {
+                    LoadFile(files[0]);
+                }
+                return;
+            }
+
+            // Text dropped?
+            string? text = e.Data.GetData(DataFormats.UnicodeText) as string
+                        ?? e.Data.GetData(DataFormats.Text) as string;
+            if (!string.IsNullOrEmpty(text))
+            {
+                editor.SelectedText = text;
             }
         }
 
@@ -649,6 +770,7 @@ namespace ognp
 
             sbPos.Text = $"Ln {line + 1}, Col {col + 1}";
             sbEol.Text = currentEolName;
+            sbIns.Text = _overwriteMode ? "OVR" : "INS";
             sbEnc.Text = EncodingDisplayName(currentEncoding);
         }
 
@@ -660,8 +782,8 @@ namespace ognp
             // Code pages for endianness
             return enc.CodePage switch
             {
-                1200  => "UTF-16 LE",
-                1201  => "UTF-16 BE",
+                1200 => "UTF-16 LE",
+                1201 => "UTF-16 BE",
                 12000 => "UTF-32 LE",
                 12001 => "UTF-32 BE",
                 _ when enc.Equals(Encoding.Default) => "ANSI",
@@ -676,5 +798,106 @@ namespace ognp
                 e.Cancel = true;
             }
         }
+
+        // ---------- Printing ----------
+
+        private void FilePageSetup()
+        {
+            using var dlg = new PageSetupDialog { Document = _printDoc };
+            try { dlg.ShowDialog(this); } catch { /* environments with no printers */ }
+        }
+
+        private void FilePrint()
+        {
+            using var dlg = new PrintDialog { Document = _printDoc, UseEXDialog = true };
+            try
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    _printDoc.Print();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Printing failed.\n\n{ex.Message}", "Notepad",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void PrintDoc_BeginPrint(object? sender, PrintEventArgs e)
+        {
+            _printCharIndex = 0;
+        }
+
+        private void PrintDoc_PrintPage(object? sender, PrintPageEventArgs e)
+        {
+            // Guard graphics (nullable annotations can flag this even though print pipeline supplies it)
+            var g = e.Graphics;
+            if (g is null)
+            {
+                e.Cancel = true;
+                e.HasMorePages = false;
+                return;
+            }
+
+            // Safe values
+            string text = editor.Text ?? string.Empty;
+            var font = editor.Font ?? SystemFonts.DefaultFont;
+            var rect = e.MarginBounds;
+
+            // Nothing left to print
+            if (_printCharIndex >= text.Length)
+            {
+                e.HasMorePages = false;
+                return;
+            }
+
+            using var fmt = new StringFormat(StringFormatFlags.LineLimit);
+
+            // Measure how much fits on this page starting at the current index
+            g.MeasureString(
+                text.AsSpan(_printCharIndex).ToString(),
+                font,
+                rect.Size,
+                fmt,
+                out int charsFitted,
+                out _);
+
+            if (charsFitted <= 0)
+            {
+                // Avoid infinite loop if the layout can’t fit anything (e.g., zero margins)
+                e.HasMorePages = false;
+                return;
+            }
+
+            // Draw that segment
+            g.DrawString(text.Substring(_printCharIndex, charsFitted), font, Brushes.Black, rect, fmt);
+            _printCharIndex += charsFitted;
+
+            e.HasMorePages = _printCharIndex < text.Length;
+        }
+
+        // ---------- Helpers ----------
+
+        private void JumpToLine(int oneBasedLine)
+        {
+            int totalLines = editor.GetLineFromCharIndex(editor.TextLength) + 1;
+            int line = Math.Max(1, Math.Min(oneBasedLine, totalLines)) - 1; // zero-based
+            int idx = editor.GetFirstCharIndexFromLine(line);
+            if (idx >= 0)
+            {
+                editor.SelectionStart = idx;
+                editor.SelectionLength = 0;
+                editor.ScrollToCaret();
+                UpdateStatus();
+            }
+        }
+
+        private void SetEol(string eol, string name)
+        {
+            currentEol = eol;
+            currentEolName = name;
+        }
+
     }
 }
