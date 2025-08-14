@@ -73,7 +73,7 @@ namespace ognp
 
         public MainForm(string? initialPath, int? initialLine = null)
         {
-            Text = "Untitled - Notepad";
+            Text = "Untitled - OGNP";
             Icon = SystemIcons.Application;
             StartPosition = FormStartPosition.CenterScreen;
             Width = 900;
@@ -211,11 +211,11 @@ namespace ognp
 
             // Help
             var help = new ToolStripMenuItem("&Help");
-            var helpAbout = new ToolStripMenuItem("&About Notepad", null, (_, __) =>
+            var helpAbout = new ToolStripMenuItem("&About OGNP", null, (_, __) =>
             {
                 MessageBox.Show(
                     "ognp (OG Notepad)\nA faithful Notepad clone written in C#.\n\n© 2025 Jim Sines (raystanza).\n\nLicensed under GPL-3.0-or-later",
-                    "About Notepad",
+                    "About ognp",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             });
 
@@ -246,7 +246,7 @@ namespace ognp
             var name = string.IsNullOrEmpty(currentPath) ? "Untitled" : Path.GetFileName(currentPath);
             var res = MessageBox.Show(
                 $"Do you want to save changes to {name}?",
-                "Notepad",
+                "OGNP",
                 MessageBoxButtons.YesNoCancel,
                 MessageBoxIcon.Exclamation);
 
@@ -299,7 +299,7 @@ namespace ognp
                 {
                     var res = MessageBox.Show(
                         $"The file is {fi.Length / (1024 * 1024)} MB. Opening may be slow. Open anyway?",
-                        "Notepad",
+                        "OGNP",
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Warning);
                     if (res != DialogResult.Yes) return;
@@ -345,7 +345,7 @@ namespace ognp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Could not open file.\n\n{ex.Message}", "Notepad",
+                MessageBox.Show($"Could not open file.\n\n{ex.Message}", "OGNP",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -371,7 +371,7 @@ namespace ognp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Could not save file.\n\n{ex.Message}", "Notepad",
+                MessageBox.Show($"Could not save file.\n\n{ex.Message}", "OGNP",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -408,7 +408,7 @@ namespace ognp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Could not save file.\n\n{ex.Message}", "Notepad",
+                MessageBox.Show($"Could not save file.\n\n{ex.Message}", "OGNP",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -758,7 +758,7 @@ namespace ognp
         private void UpdateTitle()
         {
             string name = string.IsNullOrEmpty(currentPath) ? "Untitled" : Path.GetFileName(currentPath);
-            Text = $"{name} - Notepad";
+            Text = $"{name} - OGNP";
         }
 
         private void UpdateStatus()
@@ -819,7 +819,7 @@ namespace ognp
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Printing failed.\n\n{ex.Message}", "Notepad",
+                MessageBox.Show($"Printing failed.\n\n{ex.Message}", "OGNP",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
