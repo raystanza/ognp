@@ -1,0 +1,83 @@
+using System;
+using System.Text;
+using System.Windows.Forms;
+
+namespace ognp
+{
+    public sealed class EncodingSelectForm : Form
+    {
+        private readonly ComboBox combo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly Button ok = new Button { Text = "OK", DialogResult = DialogResult.OK };
+        private readonly Button cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel };
+
+        public Encoding SelectedEncoding { get; private set; }
+
+        public EncodingSelectForm(Encoding current)
+        {
+            // Sensible default if user cancels
+            SelectedEncoding = current;
+
+            Text = "Choose Encoding";
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ShowInTaskbar = false;
+            Width = 360;
+            Height = 140;
+            StartPosition = FormStartPosition.CenterParent;
+
+            var lbl = new Label { Text = "Encoding:", AutoSize = true, Left = 12, Top = 18 };
+
+            combo.Left = 80; combo.Top = 15; combo.Width = 250;
+            combo.Items.Add(new EncItem("ANSI", Encoding.Default));
+            combo.Items.Add(new EncItem("UTF-8", new UTF8Encoding(false)));
+            combo.Items.Add(new EncItem("UTF-8 (BOM)", new UTF8Encoding(true)));
+            combo.Items.Add(new EncItem("UTF-16 LE", Encoding.Unicode));
+            combo.Items.Add(new EncItem("UTF-16 BE", Encoding.BigEndianUnicode));
+            combo.Items.Add(new EncItem("UTF-32 LE", new UTF32Encoding(false, true)));
+            combo.Items.Add(new EncItem("UTF-32 BE", new UTF32Encoding(true, true)));
+
+            // Preselect
+            for (int i = 0; i < combo.Items.Count; i++)
+            {
+                var it = (EncItem)combo.Items[i]!;
+                if (EncodingEquals(it.Encoding, current)) { combo.SelectedIndex = i; break; }
+            }
+            if (combo.SelectedIndex < 0) combo.SelectedIndex = 0;
+
+            ok.Left = 170; ok.Top = 50; ok.Width = 75;
+            cancel.Left = 255; cancel.Top = 50; cancel.Width = 75;
+
+            AcceptButton = ok;
+            CancelButton = cancel;
+
+            ok.Click += (_, __) =>
+            {
+                SelectedEncoding = ((EncItem)combo.SelectedItem!).Encoding;
+                DialogResult = DialogResult.OK;
+            };
+
+            Controls.Add(lbl);
+            Controls.Add(combo);
+            Controls.Add(ok);
+            Controls.Add(cancel);
+        }
+
+
+        private static bool EncodingEquals(Encoding a, Encoding b)
+        {
+            // Compare by CodePage and BOM presence for UTF-8
+            if (a is UTF8Encoding u8a && b is UTF8Encoding u8b)
+                return u8a.GetPreamble().Length == u8b.GetPreamble().Length;
+            return a.CodePage == b.CodePage;
+        }
+
+        private sealed class EncItem
+        {
+            public string Name { get; }
+            public Encoding Encoding { get; }
+            public EncItem(string name, Encoding enc) { Name = name; Encoding = enc; }
+            public override string ToString() => Name;
+        }
+    }
+}
