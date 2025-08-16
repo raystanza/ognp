@@ -1,0 +1,77 @@
+name: Feature request
+description: Propose a tiny, classic-friendly enhancement.
+title: "[Feature]: "
+labels:
+  - enhancement
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ognp intentionally mirrors classic Notepad. Requests must be **small**, **WinForms-only**, and **dependency-free**. Please consider interactions with **Word Wrap, Status Bar, EOL/encoding, and printing**.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope confirmation
+      options:
+        - label: No tabs, no syntax highlighting, no plugins/LSP.
+          required: true
+        - label: No new external NuGet packages or native dependencies.
+          required: true
+        - label: Feature aligns with classic Notepad UX (tiny surface area).
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What pain or limitation does this solve for a typical Notepad-style workflow?
+      placeholder: |
+        Example: It's hard to re-open recent files quickly without an MRU menu.
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Keep it brief and concrete. Include menu location and any shortcut.
+      placeholder: |
+        - Add "File → Recent Files" (last 5 items).
+        - No submenus; items numbered 1-5.
+        - No extra dialogs; selecting opens immediately.
+
+  - type: textarea
+    id: classic_interactions
+    attributes:
+      label: Interactions with classic behaviors
+      description: Note impacts to Word Wrap/Status Bar, EOL/encoding preservation, printing, or drag-and-drop.
+      placeholder: |
+        - Status Bar unchanged.
+        - No effect on EOL/encoding detection.
+        - MRU persists only in-memory (no registry writes).
+
+  - type: input
+    id: shortcut
+    attributes:
+      label: Optional shortcut
+      placeholder: e.g., Ctrl+Shift+T
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: Why not X? Why this specific approach?
+
+  - type: textarea
+    id: size
+    attributes:
+      label: Estimated size / complexity
+      description: Keep binary bloat minimal; rough estimate of lines of code or whether it's behind a menu flag.
+
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Willing to help implement?
+      options:
+        - label: I can submit a PR following CONTRIBUTING.md.
+        - label: I can test pre-release builds.

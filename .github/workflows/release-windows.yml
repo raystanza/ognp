@@ -1,0 +1,56 @@
+name: Release (Windows .NET 9)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Publish (self-contained, single file)
+        run: >
+          dotnet publish ./ognp.csproj
+          -c Release
+          -r win-x64
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=None
+          -p:SelfContained=true
+          -p:PublishReadyToRun=false
+          --output dist
+
+      - name: Compute SHA256
+        shell: pwsh
+        run: |
+          $exe = Join-Path "dist" "ognp.exe"
+          if (!(Test-Path $exe)) { throw "ognp.exe not found at $exe" }
+          $hash = (Get-FileHash -Path $exe -Algorithm SHA256).Hash.ToLower()
+          "$hash *ognp.exe" | Out-File -FilePath (Join-Path "dist" "ognp.exe.sha256") -Encoding ascii
+          Write-Host "SHA256: $hash"
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/ognp.exe
+            dist/ognp.exe.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -74,7 +74,7 @@ namespace ognp
         public MainForm(string? initialPath, int? initialLine = null)
         {
             Text = "Untitled - OGNP";
-            Icon = SystemIcons.Application;
+            this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
             StartPosition = FormStartPosition.CenterScreen;
             Width = 900;
             Height = 650;

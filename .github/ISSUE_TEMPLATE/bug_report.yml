@@ -1,0 +1,111 @@
+name: Bug report
+description: Something in ognp (OG Notepad) isn't behaving like classic Notepad.
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! Please focus on **classic Notepad parity** and the app's core behaviors (encoding/EOL, Word Wrap ↔ Status Bar, Go To, printing, etc.). Security issues? **Do not** open an issue—use Private Vulnerability Reporting instead.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I've searched existing issues.
+          required: true
+        - label: I'm on the latest release of ognp.
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug, including **expected vs. actual** behavior.
+      placeholder: |
+        Expected:
+          - "Go To" should be disabled when Word Wrap is ON.
+        Actual:
+          - It's still enabled and jumps incorrectly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: List exact steps. If file-specific, include **encoding** and **EOL** details shown in the Status Bar.
+      placeholder: |
+        1. Launch ognp
+        2. File → Open → select sample.txt (UTF-8, LF)
+        3. Turn ON Word Wrap
+        4. View "Status Bar" → observe …
+    validations:
+      required: true
+
+  - type: input
+    id: wrap
+    attributes:
+      label: Was Word Wrap ON or OFF?
+      placeholder: e.g., ON
+
+  - type: input
+    id: statusbar
+    attributes:
+      label: What did the Status Bar show?
+      description: Include **EOL** (CRLF/LF/CR) and **Encoding** (ANSI/UTF-8/etc.), plus caret/selection if relevant.
+      placeholder: e.g., "Ln 10, Col 5 | CRLF | ANSI"
+
+  - type: input
+    id: printing
+    attributes:
+      label: If printing-related, which printer/driver?
+      placeholder: e.g., "Microsoft Print to PDF | A4 | Portrait"
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Minimal sample file(s)
+      description: Paste text inline or attach files. Indicate **encoding** and **EOL**. Avoid sensitive data.
+      render: text
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Include OS, runtime, display scaling/DPI, and app version.
+      placeholder: |
+        - Windows: 11 23H2 (22631.x), x64
+        - .NET: Desktop Runtime 9.0.x (from `dotnet --info`)
+        - Display scaling: 150% (HiDPI laptop + external 100% monitor)
+        - ognp version: v0.x.y (Release page)
+    validations:
+      required: true
+
+  - type: textarea
+    id: exceptions
+    attributes:
+      label: Any exception / crash text?
+      description: Paste the **full** exception message/stack trace if applicable.
+      render: text
+
+  - type: checkboxes
+    id: classic-parity
+    attributes:
+      label: Classic behavior checks (if relevant)
+      options:
+        - label: Word Wrap toggles Status Bar visibility (hidden when ON).
+        - label: Go To is disabled when Word Wrap is ON.
+        - label: EOL preserved on save (CRLF/LF/CR).
+        - label: Encoding detection matches file BOM/ANSI expectations.
+        - label: Drag & drop opens files correctly.
+        - label: Print/Preview wraps long lines without unexpected headers/footers.
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Extra notes / screenshots
+      description: Add screenshots or short screen recordings if UI behavior is involved.

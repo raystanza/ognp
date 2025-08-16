@@ -1,6 +1,12 @@
 # ognp — OG Notepad
 
-_A faithful, minimal re-creation of classic Windows Notepad, built with C#/.NET and WinForms._
+[![Release (Windows .NET 9)](https://github.com/raystanza/ognp/actions/workflows/release-windows.yml/badge.svg?branch=main)](https://github.com/raystanza/ognp/actions/workflows/release-windows.yml)
+[![CodeQL](https://github.com/raystanza/ognp/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/raystanza/ognp/actions/workflows/codeql.yml)
+[![License](https://img.shields.io/github/license/raystanza/ognp)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/raystanza/ognp?sort=semver)](https://github.com/raystanza/ognp/releases)
+[![Downloads](https://img.shields.io/github/downloads/raystanza/ognp/total)](https://github.com/raystanza/ognp/releases)
+
+_A faithful, minimal re-creation of classic Windows Notepad, built for speed and simplicity._
 
 > **Why?** Recent changes to Windows Notepad left some folks missing the old, ultra-simple experience. **ognp** aims to be that: fast, tiny, dependency-free, and familiar.
 
@@ -9,7 +15,7 @@ _A faithful, minimal re-creation of classic Windows Notepad, built with C#/.NET 
 ## Features
 
 - **Classic UI & behavior**
-  - File: New / Open / Save / Save As… / Exit
+  - File: New / Open / Save / Save As… / Page Setup / Print / Print Preview / Exit
   - Edit: Undo, Cut/Copy/Paste/Delete, **Find**, **Find Next (F3)**, **Replace**, **Go To (Ctrl+G)**, **Time/Date (F5)**, Select All
   - Format: **Word Wrap** (off by default), **Font…**
   - View: **Status Bar** (hidden when Word Wrap is on, like the original)
@@ -20,9 +26,12 @@ _A faithful, minimal re-creation of classic Windows Notepad, built with C#/.NET 
 - **Line endings**
   - Detects & preserves **CRLF / LF / CR** on save
   - Status bar shows current EOL and encoding
+- **Quality-of-life**
+  - Drag & drop files to open
+  - Accurate cursor position and selection length in the status bar
 - **No bloat**
-  - No telemetry, no network calls, No Co-Pilot, **no external NuGet packages**
-  - Pure WinForms, .NET 9 (Windows only)
+  - No telemetry, no network calls, no AI, & **no external packages**
+  - Single portable `.exe` (no installer required)
 
 > **Non-goals:** This isn’t a code editor. No tabs, no plugins, no syntax highlighting—just a classic text editor.
 
@@ -30,106 +39,114 @@ _A faithful, minimal re-creation of classic Windows Notepad, built with C#/.NET 
 
 ## Screenshot
 
-![ognp screenshot](docs/screenshot.png)
+![ognp screenshot](assets/images/screenshot.png)
 
 ---
 
-## Getting Started
+## Download
 
-### Requirements
+Head to the **[GitHub Releases](https://github.com/raystanza/ognp/releases)** page and grab the latest assets:
 
-- Windows 10/11
-- [.NET SDK 9.0](https://dotnet.microsoft.com/en-us/download)
+- `ognp.exe` — portable Windows executable
+- `ognp.exe.sha256` — checksum file for verification
 
-### Build & Run (CLI)
+> **Supported OS:** Windows 10/11.
+> The published build is self-contained. If you ever see a runtime prompt, it is for the **.NET Desktop Runtime 9.0**. If your system is up-to-date, with 'Windows Updates', you should _NOT_ see this message.  However, if you do, please install the **.NET Desktop Runtime 9.0**.
+
+---
+
+## Verify your download (recommended)
+
+**Windows (PowerShell):**
 
 ```powershell
-git clone https://github.com/raystanza/ognp.git
-cd ognp
-dotnet run --project ognp
+cd "folder\where\you\downloaded\files"
+$expected = (Get-Content .\ognp.exe.sha256).Split(" ")[0]
+$actual   = (Get-FileHash -Algorithm SHA256 .\ognp.exe).Hash.ToLower()
+if ($actual -eq $expected) { "OK: SHA256 matches." } else { "MISMATCH!" }
 ```
 
-### Pack a portable EXE (self-contained)
+---
+
+## How to run
+
+Double-click `ognp.exe` to launch, or open a file from the command line:
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained true `
-  -p:PublishSingleFile=true `
-  -p:EnableCompressionInSingleFile=true `
-  -p:DebugType=None -p:DebugSymbols=false `
-# Output in: .\ognp\bin\Release\net9.0-windows\win-x64\publish\ognp.exe
+ognp.exe "C:\path\to\file.txt"
 ```
 
-> For ARM64: use `-r win-arm64`.
+You can also **drag & drop** a file onto the window to open it.
 
 ---
 
-## Usage
+## Keyboard shortcuts
 
-- Launch `ognp` normally, or open a file from the command line:
-
-  ```powershell
-  ognp.exe "C:\path\to\file.txt"
-  ```
-
-- **Shortcuts**
-
-  - `Ctrl+N` New `Ctrl+O` Open `Ctrl+S` Save `F12` Save As
-  - `Ctrl+F` Find `F3` Find Next `Ctrl+H` Replace
-  - `Ctrl+G` Go To `Ctrl+A` Select All `F5` Time/Date
-  - Word Wrap toggles Go To & Status Bar availability (classic behavior)
+- **File:** `Ctrl+N` New · `Ctrl+O` Open · `Ctrl+S` Save · `F12` Save As
+- **Edit:** `Ctrl+F` Find · `F3` Find Next · `Ctrl+H` Replace
+  `Ctrl+G` Go To · `Ctrl+A` Select All · `F5` Time/Date
+- **Format/View:** Word Wrap toggles Go To & Status Bar availability (classic behavior)
 
 ---
 
-## Design Notes
+## Text encoding & line endings
 
-- **ANSI-first mindset:** If no BOM is present, files open as ANSI (system default code page).
-- **Preserve user intent:** EOL style is detected on open and preserved on save.
-- **Tiny surface area:** Only standard WinForms controls; no designer file; UI built in code.
-
----
-
-## Roadmap
-
-- Printing (Page Setup / Print / Print Preview)
-- MRU (“Recent Files”) menu
-- Drag-and-drop to open
-- Optional command-line `+<line>` support (jump to line on open)
-
-> Have a small, classic-friendly idea? Open an issue to discuss before implementing.
+- If a file has a **BOM**, ognp uses it.
+- If not, ognp opens as **ANSI** (your system’s default code page).
+- “Save As” lets you choose encodings explicitly.
+- EOL style (**CRLF / LF / CR**) is detected on open and preserved on save.
 
 ---
 
-## Contributing
+## Printing
 
-Contributions are welcome!
-Please keep changes **small, focused, and faithful** to classic Notepad.
-
-1. Open an issue describing the problem/idea.
-2. Fork → create a feature branch → commit with clear messages.
-3. Ensure `dotnet build` and `dotnet test` (if present) pass.
-4. Open a PR referencing the issue.
-
-**Style & principles**:
-
-- No external dependencies.
-- Favor plain WinForms and standard library APIs.
-- Keep UI simple and accessible; respect system themes and DPI.
-
-> See [`CONTRIBUTING.md`](CONTRIBUTING.md) for full guidelines.
+Use **File → Page Setup / Print** for classic printing behavior. Long lines wrap across pages; headers/footers are intentionally minimal (in keeping with Notepad’s feel).
 
 ---
 
-## Security
+## File associations (optional)
 
-This is an offline text editor with no network features.
-If you discover a security issue, please open a private advisory or email the maintainer.
+To make ognp your default editor for `.txt` files:
+
+1. Right-click any `.txt` → **Open with** → **Choose another app**
+2. **Browse** to `ognp.exe`, check **Always use this app**, and confirm.
+
+---
+
+## Privacy & security
+
+- ognp has **no network features** and **no telemetry**.
+- If you discover a security issue, please open a **private advisory** or email the maintainer (avoid public issues for security topics).
+
+See [`SECURITY.md`](SECURITY.md) for details.
+
+---
+
+## Frequently asked
+
+**Does it support tabs or syntax highlighting?**
+No—by design. ognp focuses on the classic Notepad experience.
+
+**Can I change the default encoding?**
+Use **Save As** to choose a specific encoding for output. Files without a BOM open as ANSI.
+
+**Why is the Status Bar hidden sometimes?**
+When **Word Wrap** is on, the status bar hides—this matches the original Notepad behavior.
+
+---
+
+## Support & feedback
+
+- **Bugs & requests:** open an **Issue** on GitHub (include Windows version and repro steps)
+- **Discussions Q&A:** use **Discussions** if enabled on the repo
+
+For development guidelines, see **[`CONTRIBUTING.md`](CONTRIBUTING.md)**.
 
 ---
 
 ## License
 
-GPL-3.0-or-later.
-See [`LICENSE`](LICENSE) for details.
+**GPL-3.0-or-later.** See [`LICENSE`](LICENSE) for details.
 
 ---
 
