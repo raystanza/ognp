@@ -1,0 +1,12 @@
+name: "ognp CodeQL configuration"
+
+# Exclude generated/build outputs from CodeQL database & analysis
+paths-ignore:
+  - dist/**
+  - '**/bin/**'
+  - '**/obj/**'
+
+# We can add pack/queries configuration here later if needed, e.g.:
+# queries:
+#   - uses: security-extended
+#   - uses: codeql/csharp-queries@latest
