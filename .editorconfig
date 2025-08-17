@@ -43,7 +43,7 @@ csharp_style_expression_bodied_methods = when_on_single_line:suggestion
 csharp_style_expression_bodied_properties = when_on_single_line:suggestion
 
 # Namespace & usings placement
-csharp_style_namespace_declarations = block_scoped:suggestion
+csharp_style_namespace_declarations = file_scoped:suggestion
 csharp_using_directive_placement = outside_namespace:suggestion
 
 # Braces & new lines
@@ -89,6 +89,13 @@ dotnet_naming_rule.types_members_pascalcase.symbols  = types_members
 dotnet_naming_rule.types_members_pascalcase.style    = pascalcase_style
 
 dotnet_naming_symbols.types_members.applicable_kinds = class, struct, interface, enum, delegate, property, method, event
+
+# Match namespace to folders? No thanks.
+dotnet_style_namespace_match_folder = false:silent
+dotnet_diagnostic.IDE0130.severity = none
+
+# Prefer file-scoped namespaces
+dotnet_diagnostic.IDE0160.severity = none
 
 ############################
 # Markdown/docs
