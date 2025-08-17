@@ -1,10 +1,11 @@
 # ognp — OG Notepad
 
-[![Release (Windows .NET 9)](https://github.com/raystanza/ognp/actions/workflows/release-windows.yml/badge.svg?branch=main)](https://github.com/raystanza/ognp/actions/workflows/release-windows.yml)
+[![Release (Windows .NET 9)](https://github.com/raystanza/ognp/actions/workflows/release-windows.yml/badge.svg)](https://github.com/raystanza/ognp/actions/workflows/release-windows.yml)
 [![CodeQL](https://github.com/raystanza/ognp/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/raystanza/ognp/actions/workflows/codeql.yml)
 [![License](https://img.shields.io/github/license/raystanza/ognp)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/raystanza/ognp?sort=semver)](https://github.com/raystanza/ognp/releases)
 [![Downloads](https://img.shields.io/github/downloads/raystanza/ognp/total)](https://github.com/raystanza/ognp/releases)
+[![wakatime](https://wakatime.com/badge/github/raystanza/ognp.svg)](https://wakatime.com/badge/github/raystanza/ognp)
 
 _A faithful, minimal re-creation of classic Windows Notepad, built for speed and simplicity._
 
