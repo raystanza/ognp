@@ -52,5 +52,6 @@ jobs:
           files: |
             dist/ognp.exe
             dist/ognp.exe.sha256
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
