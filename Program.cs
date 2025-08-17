@@ -52,7 +52,14 @@ namespace ognp
 
             if (!string.IsNullOrWhiteSpace(path))
             {
-                try { path = Path.GetFullPath(path!); } catch { /* ignore bad paths */ }
+                try
+                {
+                    path = Path.GetFullPath(path!);
+                }
+                catch (ArgumentException) { /* ignore bad paths */ }
+                catch (NotSupportedException) { /* ignore bad paths */ }
+                catch (PathTooLongException) { /* ignore bad paths */ }
+                catch (System.Security.SecurityException) { /* ignore bad paths */ }
             }
 
             Application.Run(new MainForm(path, line));

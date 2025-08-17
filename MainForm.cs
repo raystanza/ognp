@@ -21,9 +21,11 @@
 */
 
 using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using System.Drawing;
@@ -37,10 +39,15 @@ namespace ognp
         private readonly TextBox editor = new TextBox();
         private readonly MenuStrip menu = new MenuStrip();
         private readonly StatusStrip status = new StatusStrip();
+
+        // Status bar labels (all disposables -> fields)
         private readonly ToolStripStatusLabel sbPos = new ToolStripStatusLabel();
         private readonly ToolStripStatusLabel sbEol = new ToolStripStatusLabel();
         private readonly ToolStripStatusLabel sbIns = new ToolStripStatusLabel();
         private readonly ToolStripStatusLabel sbEnc = new ToolStripStatusLabel();
+        private readonly ToolStripStatusLabel sbSpring = new ToolStripStatusLabel() { Spring = true };
+        private readonly ToolStripStatusLabel sbSpacer1 = new ToolStripStatusLabel() { Text = "  " };
+        private readonly ToolStripStatusLabel sbSpacer2 = new ToolStripStatusLabel() { Text = "  " };
 
         // State
         private string? currentPath;
@@ -56,10 +63,48 @@ namespace ognp
         private bool lastMatchCase = false;
         private bool lastSearchDown = true;
 
-        // Menu items we need to toggle
-        private ToolStripMenuItem viewStatusBarItem = null!;
-        private ToolStripMenuItem formatWordWrapItem = null!;
-        private ToolStripMenuItem editGoToItem = null!;
+        // Menus (all disposables -> fields)
+        private readonly ToolStripMenuItem mFile = new ToolStripMenuItem("&File");
+        private readonly ToolStripMenuItem mEdit = new ToolStripMenuItem("&Edit");
+        private readonly ToolStripMenuItem mFormat = new ToolStripMenuItem("F&ormat");
+        private readonly ToolStripMenuItem miFormatFont = new ToolStripMenuItem("&Font...");
+        private readonly ToolStripMenuItem mView = new ToolStripMenuItem("&View");
+        private readonly ToolStripMenuItem mHelp = new ToolStripMenuItem("&Help");
+
+        // File menu items
+        private readonly ToolStripMenuItem miFileNew = new ToolStripMenuItem("&New");
+        private readonly ToolStripMenuItem miFileOpen = new ToolStripMenuItem("&Open...");
+        private readonly ToolStripMenuItem miFileSave = new ToolStripMenuItem("&Save");
+        private readonly ToolStripMenuItem miFileSaveAs = new ToolStripMenuItem("Save &As...");
+        private readonly ToolStripMenuItem miFilePageSetup = new ToolStripMenuItem("Page Set&up...");
+        private readonly ToolStripMenuItem miFilePrint = new ToolStripMenuItem("&Print...");
+        private readonly ToolStripMenuItem miFileExit = new ToolStripMenuItem("E&xit");
+        private readonly ToolStripSeparator sepFile1 = new ToolStripSeparator();
+        private readonly ToolStripSeparator sepFile2 = new ToolStripSeparator();
+        private readonly ToolStripSeparator sepFile3 = new ToolStripSeparator();
+
+        // Edit menu items
+        private readonly ToolStripMenuItem miEditUndo = new ToolStripMenuItem("&Undo");
+        private readonly ToolStripMenuItem miEditCut = new ToolStripMenuItem("Cu&t");
+        private readonly ToolStripMenuItem miEditCopy = new ToolStripMenuItem("&Copy");
+        private readonly ToolStripMenuItem miEditPaste = new ToolStripMenuItem("&Paste");
+        private readonly ToolStripMenuItem miEditDelete = new ToolStripMenuItem("De&lete");
+        private readonly ToolStripMenuItem miEditFind = new ToolStripMenuItem("&Find...");
+        private readonly ToolStripMenuItem miEditFindNext = new ToolStripMenuItem("Find &Next");
+        private readonly ToolStripMenuItem miEditReplace = new ToolStripMenuItem("&Replace...");
+        private readonly ToolStripMenuItem miEditSelectAll = new ToolStripMenuItem("Select &All");
+        private readonly ToolStripMenuItem miEditTimeDate = new ToolStripMenuItem("Time/&Date");
+        private readonly ToolStripSeparator sepEdit1 = new ToolStripSeparator();
+        private readonly ToolStripSeparator sepEdit2 = new ToolStripSeparator();
+        private readonly ToolStripSeparator sepEdit3 = new ToolStripSeparator();
+
+        // Menu items we need to toggle (make them real fields, not null!)
+        private readonly ToolStripMenuItem viewStatusBarItem = new ToolStripMenuItem("&Status Bar");
+        private readonly ToolStripMenuItem formatWordWrapItem = new ToolStripMenuItem("&Word Wrap");
+        private readonly ToolStripMenuItem editGoToItem = new ToolStripMenuItem("&Go To...");
+
+        // Help
+        private readonly ToolStripMenuItem miHelpAbout = new ToolStripMenuItem("&About OGNP");
 
         // Printing
         private readonly PrintDocument _printDoc = new PrintDocument();
@@ -130,109 +175,133 @@ namespace ognp
             FormClosing += MainForm_FormClosing;
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // Items inside Controls/ToolStrips are disposed by base.Dispose via the control tree.
+                // Dispose things not parented to the Form's Controls collection.
+                _printDoc?.Dispose();
+                findForm?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
         // ---------- UI BUILDERS ----------
 
         private void BuildMenus()
         {
             // File
-            var file = new ToolStripMenuItem("&File");
-            var fileNew = new ToolStripMenuItem("&New", null, (_, __) => FileNew())
-            { ShortcutKeys = Keys.Control | Keys.N };
-            var fileOpen = new ToolStripMenuItem("&Open...", null, (_, __) => FileOpen())
-            { ShortcutKeys = Keys.Control | Keys.O };
-            var fileSave = new ToolStripMenuItem("&Save", null, (_, __) => FileSave())
-            { ShortcutKeys = Keys.Control | Keys.S };
-            var fileSaveAs = new ToolStripMenuItem("Save &As...", null, (_, __) => FileSaveAs())
-            { ShortcutKeys = Keys.F12 };
-            var filePageSetup = new ToolStripMenuItem("Page Set&up...", null, (_, __) => FilePageSetup());
-            var filePrint = new ToolStripMenuItem("&Print...", null, (_, __) => FilePrint())
-            { ShortcutKeys = Keys.Control | Keys.P };
-            var fileExit = new ToolStripMenuItem("E&xit", null, (_, __) => Close());
+            miFileNew.ShortcutKeys = Keys.Control | Keys.N;
+            miFileNew.Click += (_, __) => FileNew();
 
-            file.DropDownItems.AddRange(new ToolStripItem[]
+            miFileOpen.ShortcutKeys = Keys.Control | Keys.O;
+            miFileOpen.Click += (_, __) => FileOpen();
+
+            miFileSave.ShortcutKeys = Keys.Control | Keys.S;
+            miFileSave.Click += (_, __) => FileSave();
+
+            miFileSaveAs.ShortcutKeys = Keys.F12;
+            miFileSaveAs.Click += (_, __) => FileSaveAs();
+
+            miFilePageSetup.Click += (_, __) => FilePageSetup();
+
+            miFilePrint.ShortcutKeys = Keys.Control | Keys.P;
+            miFilePrint.Click += (_, __) => FilePrint();
+
+            miFileExit.Click += (_, __) => Close();
+
+            mFile.DropDownItems.AddRange(new ToolStripItem[]
             {
-                fileNew, fileOpen, new ToolStripSeparator(),
-                fileSave, fileSaveAs, new ToolStripSeparator(),
-                filePageSetup, filePrint, new ToolStripSeparator(),
-                fileExit
+                miFileNew, miFileOpen, sepFile1,
+                miFileSave, miFileSaveAs, sepFile2,
+                miFilePageSetup, miFilePrint, sepFile3,
+                miFileExit
             });
 
             // Edit
-            var edit = new ToolStripMenuItem("&Edit");
-            var editUndo = new ToolStripMenuItem("&Undo", null, (_, __) => { if (editor.CanUndo) editor.Undo(); })
-            { ShortcutKeys = Keys.Control | Keys.Z };
-            var editCut = new ToolStripMenuItem("Cu&t", null, (_, __) => editor.Cut())
-            { ShortcutKeys = Keys.Control | Keys.X };
-            var editCopy = new ToolStripMenuItem("&Copy", null, (_, __) => editor.Copy())
-            { ShortcutKeys = Keys.Control | Keys.C };
-            var editPaste = new ToolStripMenuItem("&Paste", null, (_, __) => editor.Paste())
-            { ShortcutKeys = Keys.Control | Keys.V };
-            var editDelete = new ToolStripMenuItem("De&lete", null, (_, __) => { if (editor.SelectionLength > 0) editor.SelectedText = string.Empty; })
-            { ShortcutKeys = Keys.Delete };
-            var editFind = new ToolStripMenuItem("&Find...", null, (_, __) => ShowFindReplace(false))
-            { ShortcutKeys = Keys.Control | Keys.F };
-            var editFindNext = new ToolStripMenuItem("Find &Next", null, (_, __) => DoFindNext(false))
-            { ShortcutKeys = Keys.F3 };
-            var editReplace = new ToolStripMenuItem("&Replace...", null, (_, __) => ShowFindReplace(true))
-            { ShortcutKeys = Keys.Control | Keys.H };
-            editGoToItem = new ToolStripMenuItem("&Go To...", null, (_, __) => ShowGoTo())
-            { ShortcutKeys = Keys.Control | Keys.G };
-            var editSelectAll = new ToolStripMenuItem("Select &All", null, (_, __) => { editor.SelectAll(); })
-            { ShortcutKeys = Keys.Control | Keys.A };
-            var editTimeDate = new ToolStripMenuItem("Time/&Date", null, (_, __) => InsertTimeDate())
-            { ShortcutKeys = Keys.F5 };
+            miEditUndo.ShortcutKeys = Keys.Control | Keys.Z;
+            miEditUndo.Click += (_, __) => { if (editor.CanUndo) editor.Undo(); };
 
-            edit.DropDownItems.AddRange(new ToolStripItem[]
+            miEditCut.ShortcutKeys = Keys.Control | Keys.X;
+            miEditCut.Click += (_, __) => editor.Cut();
+
+            miEditCopy.ShortcutKeys = Keys.Control | Keys.C;
+            miEditCopy.Click += (_, __) => editor.Copy();
+
+            miEditPaste.ShortcutKeys = Keys.Control | Keys.V;
+            miEditPaste.Click += (_, __) => editor.Paste();
+
+            miEditDelete.ShortcutKeys = Keys.Delete;
+            miEditDelete.Click += (_, __) => { if (editor.SelectionLength > 0) editor.SelectedText = string.Empty; };
+
+            miEditFind.ShortcutKeys = Keys.Control | Keys.F;
+            miEditFind.Click += (_, __) => ShowFindReplace(false);
+
+            miEditFindNext.ShortcutKeys = Keys.F3;
+            miEditFindNext.Click += (_, __) => DoFindNext(false);
+
+            miEditReplace.ShortcutKeys = Keys.Control | Keys.H;
+            miEditReplace.Click += (_, __) => ShowFindReplace(true);
+
+            editGoToItem.ShortcutKeys = Keys.Control | Keys.G;
+            editGoToItem.Click += (_, __) => ShowGoTo();
+
+            miEditSelectAll.ShortcutKeys = Keys.Control | Keys.A;
+            miEditSelectAll.Click += (_, __) => editor.SelectAll();
+
+            miEditTimeDate.ShortcutKeys = Keys.F5;
+            miEditTimeDate.Click += (_, __) => InsertTimeDate();
+
+            mEdit.DropDownItems.AddRange(new ToolStripItem[]
             {
-                editUndo, new ToolStripSeparator(),
-                editCut, editCopy, editPaste, editDelete, new ToolStripSeparator(),
-                editFind, editFindNext, editReplace, editGoToItem, new ToolStripSeparator(),
-                editSelectAll, editTimeDate
+                miEditUndo, sepEdit1,
+                miEditCut, miEditCopy, miEditPaste, miEditDelete, sepEdit2,
+                miEditFind, miEditFindNext, miEditReplace, editGoToItem, sepEdit3,
+                miEditSelectAll, miEditTimeDate
             });
 
             // Format
-            var format = new ToolStripMenuItem("F&ormat");
-            formatWordWrapItem = new ToolStripMenuItem("&Word Wrap", null, (_, __) => ToggleWordWrap())
-            { CheckOnClick = true, Checked = false };
-            var formatFont = new ToolStripMenuItem("&Font...", null, (_, __) => ChooseFont());
+            formatWordWrapItem.CheckOnClick = true;
+            formatWordWrapItem.Checked = false;
+            formatWordWrapItem.Click += (_, __) => ToggleWordWrap();
 
-            format.DropDownItems.AddRange(new ToolStripItem[]
+            miFormatFont.Click += (_, __) => ChooseFont();
+
+            mFormat.DropDownItems.AddRange(new ToolStripItem[]
             {
                 formatWordWrapItem,
-                formatFont
+                miFormatFont
             });
 
             // View
-            var view = new ToolStripMenuItem("&View");
-            viewStatusBarItem = new ToolStripMenuItem("&Status Bar", null, (_, __) => ToggleStatusBar())
-            { CheckOnClick = true, Checked = true };
-
-            view.DropDownItems.Add(viewStatusBarItem);
+            viewStatusBarItem.CheckOnClick = true;
+            viewStatusBarItem.Checked = true;
+            viewStatusBarItem.Click += (_, __) => ToggleStatusBar();
+            mView.DropDownItems.Add(viewStatusBarItem);
 
             // Help
-            var help = new ToolStripMenuItem("&Help");
-            var helpAbout = new ToolStripMenuItem("&About OGNP", null, (_, __) =>
+            miHelpAbout.Click += (_, __) =>
             {
                 MessageBox.Show(
                     "ognp (OG Notepad)\nA faithful Notepad clone written in C#.\n\n© 2025 Jim Sines (raystanza).\n\nLicensed under GPL-3.0-or-later",
                     "About ognp",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
-            });
+            };
+            mHelp.DropDownItems.Add(miHelpAbout);
 
-            help.DropDownItems.Add(helpAbout);
-
-            menu.Items.AddRange(new ToolStripItem[] { file, edit, format, view, help });
+            menu.Items.AddRange(new ToolStripItem[] { mFile, mEdit, mFormat, mView, mHelp });
         }
 
         private void BuildStatusBar()
         {
             status.SizingGrip = true;
             status.Items.Add(sbPos);
-            status.Items.Add(new ToolStripStatusLabel() { Spring = true });
+            status.Items.Add(sbSpring);
             status.Items.Add(sbEol);
-            status.Items.Add(new ToolStripStatusLabel() { Text = "  " });
+            status.Items.Add(sbSpacer1);
             status.Items.Add(sbIns);
-            status.Items.Add(new ToolStripStatusLabel() { Text = "  " });
+            status.Items.Add(sbSpacer2);
             status.Items.Add(sbEnc);
             UpdateStatus();
         }
@@ -343,9 +412,24 @@ namespace ognp
                 UpdateTitle();
                 UpdateStatus();
             }
-            catch (Exception ex)
+            catch (IOException ex)
             {
-                MessageBox.Show($"Could not open file.\n\n{ex.Message}", "OGNP",
+                MessageBox.Show($"Could not open file (I/O error).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                MessageBox.Show($"Could not open file (access denied).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (NotSupportedException ex)
+            {
+                MessageBox.Show($"Could not open file (unsupported path).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (System.Security.SecurityException ex)
+            {
+                MessageBox.Show($"Could not open file (security error).\n\n{ex.Message}", "OGNP",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -369,9 +453,27 @@ namespace ognp
                 UpdateStatus();
                 return true;
             }
-            catch (Exception ex)
+            catch (IOException ex)
             {
-                MessageBox.Show($"Could not save file.\n\n{ex.Message}", "OGNP",
+                MessageBox.Show($"Could not save file (I/O error).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                MessageBox.Show($"Could not save file (access denied).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            catch (NotSupportedException ex)
+            {
+                MessageBox.Show($"Could not save file (unsupported path).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            catch (System.Security.SecurityException ex)
+            {
+                MessageBox.Show($"Could not save file (security error).\n\n{ex.Message}", "OGNP",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -406,9 +508,27 @@ namespace ognp
                 UpdateStatus();
                 return true;
             }
-            catch (Exception ex)
+            catch (IOException ex)
             {
-                MessageBox.Show($"Could not save file.\n\n{ex.Message}", "OGNP",
+                MessageBox.Show($"Could not save file (I/O error).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                MessageBox.Show($"Could not save file (access denied).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            catch (NotSupportedException ex)
+            {
+                MessageBox.Show($"Could not save file (unsupported path).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            catch (System.Security.SecurityException ex)
+            {
+                MessageBox.Show($"Could not save file (security error).\n\n{ex.Message}", "OGNP",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
@@ -416,7 +536,6 @@ namespace ognp
 
         private static void DetectAndSetEol(string text, out string eol, out string name)
         {
-            // Check order: CRLF, LF, CR (classic Mac)
             if (text.Contains("\r\n"))
             { eol = "\r\n"; name = "Windows (CRLF)"; }
             else if (text.Contains('\n'))
@@ -431,15 +550,10 @@ namespace ognp
             DetectAndSetEol(text, out currentEol, out currentEolName);
         }
 
-        private static string NormalizeToEditor(string text)
-        {
-            // WinForms TextBox can display CRLF/LF; keep as-is so caret positions are natural.
-            return text;
-        }
+        private static string NormalizeToEditor(string text) => text;
 
         private string PrepareForSave(string text)
         {
-            // Normalize to \n then convert to the chosen EOL
             var normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
             return normalized.Replace("\n", currentEol);
         }
@@ -462,7 +576,6 @@ namespace ognp
 
         private void UpdateViewWordWrapDependencies()
         {
-            // Status Bar is disabled (not shown) when Word Wrap is ON
             viewStatusBarItem.Enabled = !editor.WordWrap;
             status.Visible = !editor.WordWrap && viewStatusBarItem.Checked;
 
@@ -478,7 +591,6 @@ namespace ognp
             }
             else
             {
-                // If WordWrap is on, force status bar off
                 viewStatusBarItem.Checked = false;
                 status.Visible = false;
             }
@@ -501,7 +613,6 @@ namespace ognp
 
         private void ShowFindReplace(bool replaceMode)
         {
-            // Copy to a local to satisfy nullable analysis for fields
             var f = findForm;
             if (f != null)
             {
@@ -550,7 +661,7 @@ namespace ognp
             using var dlg = new GoToForm(totalLines);
             if (dlg.ShowDialog(this) == DialogResult.OK)
             {
-                int line = dlg.LineNumber - 1; // zero-based for TextBox
+                int line = dlg.LineNumber - 1;
                 line = Math.Max(0, Math.Min(line, totalLines - 1));
                 int index = editor.GetFirstCharIndexFromLine(line);
                 if (index >= 0)
@@ -588,7 +699,6 @@ namespace ognp
             }
             else
             {
-                // search up
                 if (searchFrom >= 0)
                     found = text.LastIndexOf(needle, searchFrom, comparison);
                 if (found < 0)
@@ -668,7 +778,6 @@ namespace ognp
 
         private void Editor_KeyDown(object? sender, KeyEventArgs e)
         {
-            // Insert toggles overtype
             if (e.KeyCode == Keys.Insert)
             {
                 _overwriteMode = !_overwriteMode;
@@ -677,13 +786,11 @@ namespace ognp
                 return;
             }
 
-            // F5 = Insert date/time
             if (e.KeyCode == Keys.F5)
             {
                 InsertTimeDate();
                 e.Handled = true;
             }
-            // Shift+F3 : Find previous
             else if (e.KeyCode == Keys.F3 && e.Shift)
             {
                 DoFindNext(true);
@@ -691,24 +798,21 @@ namespace ognp
             }
         }
 
-        // Implement real overtype behavior
         private void Editor_KeyPress(object? sender, KeyPressEventArgs e)
         {
             if (!_overwriteMode) return;
-            if (char.IsControl(e.KeyChar)) return; // let backspace, enter, etc. behave normally
-            if (editor.SelectionLength > 0) return; // normal replace if selection exists
+            if (char.IsControl(e.KeyChar)) return;
+            if (editor.SelectionLength > 0) return;
 
             int caret = editor.SelectionStart;
             if (caret < editor.TextLength)
             {
-                // don't overwrite across line endings
                 char c = editor.Text[caret];
                 if (c != '\r' && c != '\n')
                 {
-                    editor.SelectionLength = 1; // select next char so typed char replaces it
+                    editor.SelectionLength = 1;
                 }
             }
-            // default processing inserts (replaces selection if any)
         }
 
         private void Editor_DragEnter(object? sender, DragEventArgs e)
@@ -725,7 +829,6 @@ namespace ognp
         {
             if (e.Data == null) return;
 
-            // File(s) dropped?
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 if (!ConfirmDiscardChanges()) return;
@@ -738,7 +841,6 @@ namespace ognp
                 return;
             }
 
-            // Text dropped?
             string? text = e.Data.GetData(DataFormats.UnicodeText) as string
                         ?? e.Data.GetData(DataFormats.Text) as string;
             if (!string.IsNullOrEmpty(text))
@@ -763,7 +865,6 @@ namespace ognp
 
         private void UpdateStatus()
         {
-            // Ln/Col
             int caret = editor.SelectionStart;
             int line = editor.GetLineFromCharIndex(caret);
             int col = caret - editor.GetFirstCharIndexFromLine(line);
@@ -779,7 +880,6 @@ namespace ognp
             if (enc is UTF8Encoding u8)
                 return u8.GetPreamble().Length > 0 ? "UTF-8 (BOM)" : "UTF-8";
 
-            // Code pages for endianness
             return enc.CodePage switch
             {
                 1200 => "UTF-16 LE",
@@ -804,7 +904,18 @@ namespace ognp
         private void FilePageSetup()
         {
             using var dlg = new PageSetupDialog { Document = _printDoc };
-            try { dlg.ShowDialog(this); } catch { /* environments with no printers */ }
+            try
+            {
+                dlg.ShowDialog(this);
+            }
+            catch (InvalidPrinterException)
+            {
+                // No printers / invalid printer installed
+            }
+            catch (Win32Exception)
+            {
+                // System dialog error
+            }
         }
 
         private void FilePrint()
@@ -817,9 +928,19 @@ namespace ognp
                     _printDoc.Print();
                 }
             }
-            catch (Exception ex)
+            catch (InvalidPrinterException ex)
             {
-                MessageBox.Show($"Printing failed.\n\n{ex.Message}", "OGNP",
+                MessageBox.Show($"Printing failed (invalid printer).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Win32Exception ex)
+            {
+                MessageBox.Show($"Printing failed (system error).\n\n{ex.Message}", "OGNP",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (ExternalException ex)
+            {
+                MessageBox.Show($"Printing failed (graphics error).\n\n{ex.Message}", "OGNP",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -831,7 +952,6 @@ namespace ognp
 
         private void PrintDoc_PrintPage(object? sender, PrintPageEventArgs e)
         {
-            // Guard graphics (nullable annotations can flag this even though print pipeline supplies it)
             var g = e.Graphics;
             if (g is null)
             {
@@ -840,12 +960,10 @@ namespace ognp
                 return;
             }
 
-            // Safe values
             string text = editor.Text ?? string.Empty;
             var font = editor.Font ?? SystemFonts.DefaultFont;
             var rect = e.MarginBounds;
 
-            // Nothing left to print
             if (_printCharIndex >= text.Length)
             {
                 e.HasMorePages = false;
@@ -854,7 +972,6 @@ namespace ognp
 
             using var fmt = new StringFormat(StringFormatFlags.LineLimit);
 
-            // Measure how much fits on this page starting at the current index
             g.MeasureString(
                 text.AsSpan(_printCharIndex).ToString(),
                 font,
@@ -865,24 +982,20 @@ namespace ognp
 
             if (charsFitted <= 0)
             {
-                // Avoid infinite loop if the layout can’t fit anything (e.g., zero margins)
                 e.HasMorePages = false;
                 return;
             }
 
-            // Draw that segment
             g.DrawString(text.Substring(_printCharIndex, charsFitted), font, Brushes.Black, rect, fmt);
             _printCharIndex += charsFitted;
 
             e.HasMorePages = _printCharIndex < text.Length;
         }
 
-        // ---------- Helpers ----------
-
         private void JumpToLine(int oneBasedLine)
         {
             int totalLines = editor.GetLineFromCharIndex(editor.TextLength) + 1;
-            int line = Math.Max(1, Math.Min(oneBasedLine, totalLines)) - 1; // zero-based
+            int line = Math.Max(1, Math.Min(oneBasedLine, totalLines)) - 1;
             int idx = editor.GetFirstCharIndexFromLine(line);
             if (idx >= 0)
             {
@@ -898,6 +1011,5 @@ namespace ognp
             currentEol = eol;
             currentEolName = name;
         }
-
     }
 }
