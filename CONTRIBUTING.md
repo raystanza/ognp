@@ -198,7 +198,3 @@ If you think you’ve found a vulnerability, please use **GitHub Private Vulnera
 By contributing, you agree your contributions will be licensed under the **GPL-3.0-or-later** license of this repository.
 
 **Trademarks/IP:** Don’t include Microsoft assets or logos. The project is not affiliated with or endorsed by Microsoft.
-
----
-
-If you want, I can also drop in matching **Issue/PR templates** and a minimal **SECURITY.md** to round out the contributor experience.
