@@ -1,4 +1,4 @@
-# ognp — OG Notepad
+# ognp (OG Notepad)
 
 [![Release (Windows .NET 9)](https://github.com/raystanza/ognp/actions/workflows/release-windows.yml/badge.svg)](https://github.com/raystanza/ognp/actions/workflows/release-windows.yml)
 [![CodeQL](https://github.com/raystanza/ognp/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/raystanza/ognp/actions/workflows/codeql.yml)
