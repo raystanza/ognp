@@ -34,7 +34,7 @@ _A faithful, minimal re-creation of classic Windows Notepad, built for speed and
   - No telemetry, no network calls, no AI, & **no external packages**
   - Single portable `.exe` (no installer required)
 
-> **Non-goals:** This isn’t a code editor. No tabs, no plugins, no syntax highlighting—just a classic text editor.
+> **Non-goals:** This isn’t a code editor. No tabs, no plugins, no syntax highlighting...just a classic text editor.
 
 ---
 
@@ -48,8 +48,8 @@ _A faithful, minimal re-creation of classic Windows Notepad, built for speed and
 
 Head to the **[GitHub Releases](https://github.com/raystanza/ognp/releases)** page and grab the latest assets:
 
-- `ognp.exe` — portable Windows executable
-- `ognp.exe.sha256` — checksum file for verification
+- `ognp.exe` → portable Windows executable
+- `ognp.exe.sha256` → checksum file for verification
 
 > **Supported OS:** Windows 10/11.
 > The published build is self-contained. If you ever see a runtime prompt, it is for the **.NET Desktop Runtime 9.0**. If your system is up-to-date, with 'Windows Updates', you should _NOT_ see this message.  However, if you do, please install the **.NET Desktop Runtime 9.0**.
@@ -126,13 +126,13 @@ See [`SECURITY.md`](SECURITY.md) for details.
 ## Frequently asked
 
 **Does it support tabs or syntax highlighting?**
-No—by design. ognp focuses on the classic Notepad experience.
+No. _ognp_ focuses on the classic Notepad experience.
 
 **Can I change the default encoding?**
 Use **Save As** to choose a specific encoding for output. Files without a BOM open as ANSI.
 
 **Why is the Status Bar hidden sometimes?**
-When **Word Wrap** is on, the status bar hides—this matches the original Notepad behavior.
+When **Word Wrap** is on, the status bar hides, this matches the original Notepad behavior.
 
 ---
 

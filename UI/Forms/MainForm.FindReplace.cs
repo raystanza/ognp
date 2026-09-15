@@ -45,7 +45,7 @@ public sealed partial class MainForm : Form
                 return;
             }
 
-            // Wrong mode or disposed — close and recreate
+            // Wrong mode or disposed; close and recreate
             try { f.Close(); } catch { /* ignore */ }
             f = null;
         }

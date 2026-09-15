@@ -43,7 +43,7 @@ Older releases are not maintained for security updates.
 - **Acknowledgement:** within **7 business days**.
 - **Triage & assessment:** within **14 business days** (often sooner).
 - **Fix & release:** coordinated with you; timing depends on complexity.
-- We can credit you in release notes (or keep you anonymous—your choice).
+- We can credit you in release notes (or keep you anonymous, your choice).
 
 ---
 

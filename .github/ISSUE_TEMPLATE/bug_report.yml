@@ -8,7 +8,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for filing a bug! Please focus on **classic Notepad parity** and the app's core behaviors (encoding/EOL, Word Wrap ↔ Status Bar, Go To, printing, etc.). Security issues? **Do not** open an issue—use Private Vulnerability Reporting instead.
+        Thanks for filing a bug! Please focus on **classic Notepad parity** and the app's core behaviors (encoding/EOL, Word Wrap ↔ Status Bar, Go To, printing, etc.). Security issues? **Do not** open an issue, please use Private Vulnerability Reporting instead.
 
   - type: checkboxes
     id: preflight

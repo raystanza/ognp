@@ -77,7 +77,7 @@ public sealed class FindReplaceForm : Form
         btnReplaceAll.Left = 305; btnReplaceAll.Top = 80; btnReplaceAll.Width = 90;
         btnCancel.Left = 305; btnCancel.Top = replaceMode ? 115 : 80; btnCancel.Width = 90;
 
-        // Direction group — ensure radios size to text and keep group left of the right button column
+        // Direction group; ensure radios size to text and keep group left of the right button column
         rbDown.AutoSize = true;
         rbUp.AutoSize = true;
 
